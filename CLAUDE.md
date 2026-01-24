@@ -64,7 +64,38 @@ gt m
 ```
 
 ## Dependency Management
+
+### pnpm Workspace
 - Use pnpm for all npm-related commands. We're using a pnpm workspace.
+
+### RivetKit Package Resolutions
+The root `/package.json` contains `resolutions` that map RivetKit packages to their local workspace versions:
+
+```json
+{
+  "resolutions": {
+    "rivetkit": "workspace:*",
+    "@rivetkit/react": "workspace:*",
+    "@rivetkit/workflow-engine": "workspace:*",
+    // ... other @rivetkit/* packages
+  }
+}
+```
+
+When adding RivetKit dependencies to examples in `/examples/`, use `*` as the version. The root resolutions will automatically resolve these to the local workspace packages:
+
+```json
+{
+  "dependencies": {
+    "rivetkit": "*",
+    "@rivetkit/react": "*"
+  }
+}
+```
+
+If you need to add a new `@rivetkit/*` package that isn't already in the root resolutions, add it to the `resolutions` object in `/package.json` with `"workspace:*"` as the value. Internal packages like `@rivetkit/workflow-engine` should be re-exported from `rivetkit` subpaths (e.g., `rivetkit/workflow`) rather than added as direct dependencies.
+
+### Rust Dependencies
 
 ## Documentation
 
@@ -155,7 +186,7 @@ Key points:
 	- For example: `fn foo() -> Result<i64> { /* ... */ }`
 - Do not glob import (`::*`) from anyhow. Instead, import individual types and traits
 
-**Dependency Management**
+**Rust Dependency Management**
 - When adding a dependency, check for a workspace dependency in Cargo.toml
 - If available, use the workspace dependency (e.g., `anyhow.workspace = true`)
 - If you need to add a dependency and can't find it in the Cargo.toml of the workspace, add it to the workspace dependencies in Cargo.toml (`[workspace.dependencies]`) and then add it to the package you need with `{dependency}.workspace = true`
