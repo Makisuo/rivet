@@ -11,7 +11,7 @@ import {
 	CONN_VERSIONED,
 } from "@/schemas/actor-persist/versioned";
 import { EXTRA_ERROR_LOG } from "@/utils";
-import type { ActorConfig } from "../config";
+import { getRunFunction, type ActorConfig } from "../config";
 import type { ConnDriver } from "../conn/driver";
 import { createHttpDriver } from "../conn/drivers/http";
 import {
@@ -943,11 +943,12 @@ export class ActorInstance<S, CP, CS, V, I, DB extends AnyDatabaseProvider> {
 	}
 
 	#startRunHandler() {
-		if (!this.#config.run) return;
+		const runFn = getRunFunction(this.#config.run);
+		if (!runFn) return;
 
 		this.#rLog.debug({ msg: "starting run handler" });
 
-		const runResult = this.#config.run(this.actorContext);
+		const runResult = runFn(this.actorContext);
 
 		if (runResult instanceof Promise) {
 			this.#runPromise = runResult

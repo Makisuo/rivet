@@ -907,6 +907,22 @@ await conn.increment(1);
 
 [Documentation](/docs/actors/clients)
 
+### Icons & Names
+
+Customize how actors appear in the UI with display names and icons:
+
+```typescript
+const chatRoom = actor({
+  options: {
+    name: "Chat Room",
+    icon: "💬",  // or FontAwesome: "comments", "chart-line", etc.
+  },
+  // ...
+});
+```
+
+[Documentation](/docs/actors/appearance).
+
 ### Getting Actors
 
 ```ts

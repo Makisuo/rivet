@@ -42,6 +42,37 @@ const zFunction = <
 	T extends (...args: any[]) => any = (...args: unknown[]) => unknown,
 >() => z.custom<T>((val) => typeof val === "function");
 
+// Schema for run handler with metadata
+export const RunConfigSchema = z.object({
+	/** Display name for the actor in the Inspector UI. */
+	name: z.string().optional(),
+	/** Icon for the actor in the Inspector UI. Can be an emoji or FontAwesome icon name. */
+	icon: z.string().optional(),
+	/** The run handler function. */
+	run: zFunction(),
+});
+export type RunConfig = z.infer<typeof RunConfigSchema>;
+
+// Run can be either a function or an object with name/icon/run
+const zRunHandler = z.union([zFunction(), RunConfigSchema]).optional();
+
+/** Extract the run function from either a function or RunConfig object. */
+export function getRunFunction(
+	run: ((...args: any[]) => any) | RunConfig | undefined,
+): ((...args: any[]) => any) | undefined {
+	if (!run) return undefined;
+	if (typeof run === "function") return run;
+	return run.run;
+}
+
+/** Extract run metadata (name/icon) from RunConfig if provided. */
+export function getRunMetadata(
+	run: ((...args: any[]) => any) | RunConfig | undefined,
+): { name?: string; icon?: string } {
+	if (!run || typeof run === "function") return {};
+	return { name: run.name, icon: run.icon };
+}
+
 // This schema is used to validate the input at runtime. The generic types are defined below in `ActorConfig`.
 //
 // We don't use Zod generics with `z.custom` because:
@@ -53,7 +84,7 @@ export const ActorConfigSchema = z
 		onDestroy: zFunction().optional(),
 		onWake: zFunction().optional(),
 		onSleep: zFunction().optional(),
-		run: zFunction().optional(),
+		run: zRunHandler,
 		onStateChange: zFunction().optional(),
 		onBeforeConnect: zFunction().optional(),
 		onConnect: zFunction().optional(),
@@ -71,6 +102,10 @@ export const ActorConfigSchema = z
 		createVars: zFunction().optional(),
 		options: z
 			.object({
+				/** Display name for the actor in the Inspector UI. */
+				name: z.string().optional(),
+				/** Icon for the actor in the Inspector UI. Can be an emoji or FontAwesome icon name. */
+				icon: z.string().optional(),
 				createVarsTimeout: z.number().positive().default(5000),
 				createConnStateTimeout: z.number().positive().default(5000),
 				onConnectTimeout: z.number().positive().default(5000),
@@ -338,18 +373,22 @@ interface BaseActorConfig<
 	 * On shutdown, the actor waits for this handler to complete with a
 	 * configurable timeout (options.runStopTimeout, default 15s).
 	 *
+	 * Can be either a function or a RunConfig object with optional name/icon metadata.
+	 *
 	 * @returns Void or a Promise. If the promise exits, the actor crashes.
 	 */
-	run?: (
-		c: RunContext<
-			TState,
-			TConnParams,
-			TConnState,
-			TVars,
-			TInput,
-			TDatabase
-		>,
-	) => void | Promise<void>;
+	run?:
+		| ((
+				c: RunContext<
+					TState,
+					TConnParams,
+					TConnState,
+					TVars,
+					TInput,
+					TDatabase
+				>,
+		  ) => void | Promise<void>)
+		| RunConfig;
 
 	/**
 	 * Called when the actor's state changes.
@@ -667,6 +706,16 @@ export function test<
 
 export const DocActorOptionsSchema = z
 	.object({
+		name: z
+			.string()
+			.optional()
+			.describe("Display name for the actor in the Inspector UI."),
+		icon: z
+			.string()
+			.optional()
+			.describe(
+				"Icon for the actor in the Inspector UI. Can be an emoji (e.g., '🚀') or FontAwesome icon name (e.g., 'rocket').",
+			),
 		createVarsTimeout: z
 			.number()
 			.optional()
